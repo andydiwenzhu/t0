@@ -1,5 +1,7 @@
 import numpy as np
-import pyalgotrade
+from pyalgotrade import xxx
+
+xxx()
 
 def test_answer():
     assert np.zeros(5).sum() == 0

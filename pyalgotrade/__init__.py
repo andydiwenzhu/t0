@@ -19,3 +19,6 @@
 """
 
 __version__ = "0.18"
+
+def xxx():
+    print "xxx"
