@@ -3,3 +3,5 @@ python:
  - "2.7"
 script:
  - pytest
+before_install:
+ - export PYTHONPATH="${PYTHONPATH}:/home/travis/build/andydiwenzhu/t0"
