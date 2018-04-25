@@ -10,7 +10,7 @@ from pyalgotrade import bar
 from pyalgotrade import dataseries
 from pyalgotrade import barfeed
 #from pyalgotrade import resamplebase
-from pyalgotrade.utils import dt
+#from pyalgotrade.utils import dt
 from pyalgotrade.bar import Frequency
 
 logger = pyalgotrade.logger.getLogger("Transaction")
