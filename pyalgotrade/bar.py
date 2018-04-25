@@ -37,6 +37,7 @@ class Frequency(object):
     # It is important for frequency values to get bigger for bigger windows.
     TRADE = -1
     SECOND = 1
+    TICK = 3
     MINUTE = 60
     HOUR = 60*60
     DAY = 24*60*60
