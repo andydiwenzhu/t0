@@ -1,9 +1,2 @@
 numpy==1.11.0
 pandas==0.18.0
-TA_Lib==0.4.17
-scipy==0.17.0
-pytz==2016.3
-Requests==2.18.4
-tornado==5.0.2
-tweepy==3.6.0
-ws4py==0.5.1
