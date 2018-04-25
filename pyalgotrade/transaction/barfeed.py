@@ -28,8 +28,9 @@ class Timer(object):
         self.__noon = self.__time + datetime.timedelta(hours=2)
         self.__afternoon = self.__noon + datetime.timedelta(minutes=90)
         self.__close = self.__afternoon + datetime.timedelta(hours=2)
+        self.__terminal = self.__close + datetime.timedelta(minutes=30)
 
-    def getMarketOpen(self):
+    def getOpen(self):
         return self.__open
 
     def next(self, frequency):
@@ -41,28 +42,35 @@ class Timer(object):
 
     def update(self, frequency):
         self.__time += datetime.timedelta(seconds=frequency)
-        if self.__time > self.__noon and self.__time < self.__afternoon:
-            self.__time += datetime.timedelta(minutes=90)
-        if self.__time > self.__close:
+        if self.__time > self.__terminal:
             self.__time = None
+        elif self.__time > self.__close:
+            self.__time = self.__terminal
+        elif self.__time > self.__noon and self.__time < self.__afternoon:
+            self.__time += datetime.timedelta(minutes=90)
 
 
 
 class TransactionBar(object):
-    def __init__(self, dataSources):
+    def __init__(self, dataSources, openTime):
         self.__dfs = dataSources
         self.__lastQuoteTime = {}
+        self.__open = openTime
+
+    def time2int(self, t):
+        return t.hour*10000000+t.minute*100000+t.second*1000
 
     def get(self, identifier, endTime, method='co'):
-        startTime = datetime.time(0,0,0)
+        startTime = self.__open
         if identifier in self.__lastQuoteTime:
             startTime = self.__lastQuoteTime[identifier]
 
         if method == 'co':
             df = self.__dfs[identifier]
-            sdf = df.ix[(df.Time>=startTime)&(df.Time<endTime)]
+            df = df.ix[df.nTradePrice>0]
+            sdf = df.ix[(df.nTime>=self.time2int(startTime))&(df.nTime<self.time2int(endTime))]
 
-        bar = None
+        bar_ = None
 
         if len(sdf):
             open_ = sdf.iloc[0]['nTradePrice']
@@ -70,13 +78,14 @@ class TransactionBar(object):
             low = sdf['nTradePrice'].min()
             close = sdf.iloc[-1]['nTradePrice']
             volume = sdf['nTradeVolume'].sum()           
-            bar = bar.BasicBar(endTime, open_, high, low, close, volume, None, Frequency.Tick)
+            bar_ = bar.BasicBar(endTime, open_, high, low, close, volume, None, Frequency.TICK)
 
         self.__lastQuoteTime[identifier] = endTime
+        return bar_
 
 
 class TransactionPollingThread(threading.Thread):
-    def __init__(self, dataSources, isLive):
+    def __init__(self, dataSources, isLive, openTime):
         super(TransactionPollingThread, self).__init__()
         self._identifiers = dataSources.keys()        
         self._isLive = isLive
@@ -84,7 +93,7 @@ class TransactionPollingThread(threading.Thread):
         if isLive:
             raise NotImplementedError()
         else:
-            self._tb = TransactionBar(dataSources)
+            self._tb = TransactionBar(dataSources, openTime)
 
         self._bars = {}
 
@@ -93,12 +102,15 @@ class TransactionPollingThread(threading.Thread):
     def __wait(self):
         nextCall = self.getNextCallDateTime()
 
-        if self.__isLive:
+        if self._isLive:
             time_diff = self.nexCall - 0
             time.sleep(time_diff)
-        
+  
+        self._bars = {}   
         for identifier in self._identifiers:
-            self._bars[identifier] = self._tb.get(identifier, nextCall)
+            bar_ = self._tb.get(identifier, nextCall)
+            if bar_ is not None:
+                self._bars[identifier] = bar_
 
 
     def stop(self):
@@ -131,10 +143,10 @@ class TransactionBarFeedThread(TransactionPollingThread):
     ON_BARS = 1
 
     def __init__(self, queue, dataSources, frequency, isLive):
-        super(TransactionBarFeedThread, self).__init__(dataSources, isLive)
+        self.__timer = Timer(dataSources.values()[0].iloc[0]['nDate'])
+        super(TransactionBarFeedThread, self).__init__(dataSources, isLive, self.__timer.getOpen())
         self.__queue = queue
         self.__frequency = frequency
-        self.__timer = Timer(dataSources.values[0].iloc[0]['nDate'])
         self.__updateNextBarClose()
 
     def __updateNextBarClose(self):
@@ -208,28 +220,6 @@ class TransactionLiveFeed(barfeed.BaseBarFeed):
         except Queue.Empty:
             pass
         return ret
-
-
-
-if __name__ == '__main__':
-    from util import get_transaction
-    df = get_transaction(open('/home/disco/data/whdata/tony/20180423/transaction_000001.20180423','rb'),interval=1)
-    print df.iloc[:10]
-    exit()
-    
-    liveFeed = TransactionLiveFeed({'000001':df}, Frequency.TICK, isLive=False)
-    liveFeed.start()
-
-    while not liveFeed.eof():
-        bars = liveFeed.getNextBars()
-        if bars is not None:
-            print bars['000001'].getHigh(), bars['000001'].getDateTime()
-            # test/
-
-
-
-
-
 
 
 
