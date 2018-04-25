@@ -2,14 +2,14 @@ import Queue
 import datetime
 import threading
 import time
-import pytz
+#import pytz
 
 
 import pyalgotrade.logger
 from pyalgotrade import bar
 from pyalgotrade import dataseries
 from pyalgotrade import barfeed
-from pyalgotrade import resamplebase
+#from pyalgotrade import resamplebase
 from pyalgotrade.utils import dt
 from pyalgotrade.bar import Frequency
 
